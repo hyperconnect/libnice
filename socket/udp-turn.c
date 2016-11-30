@@ -71,6 +71,7 @@ typedef struct {
 } ChannelBinding;
 
 typedef struct {
+  NiceAgent *nice_agent;
   GMainContext *ctx;
   StunAgent agent;
   GList *channels;
@@ -167,7 +168,7 @@ priv_send_data_queue_destroy (gpointer user_data)
 }
 
 NiceSocket *
-nice_udp_turn_socket_new (GMainContext *ctx, NiceAddress *addr,
+nice_udp_turn_socket_new (NiceAgent *agent, GMainContext *ctx, NiceAddress *addr,
     NiceSocket *base_socket, NiceAddress *server_addr,
     gchar *username, gchar *password,
     NiceTurnSocketCompatibility compatibility)
@@ -203,6 +204,7 @@ nice_udp_turn_socket_new (GMainContext *ctx, NiceAddress *addr,
         STUN_AGENT_USAGE_NO_ALIGNED_ATTRIBUTES);
   }
 
+  priv->nice_agent = agent;
   priv->channels = NULL;
   priv->current_binding = NULL;
   priv->base_socket = base_socket;
@@ -955,12 +957,12 @@ priv_forget_send_request (gpointer pointer)
 {
   SendRequest *req = pointer;
 
-  agent_lock ();
+  agent_lock (req->priv->nice_agent);
 
   if (g_source_is_destroyed (g_main_current_source ())) {
     nice_debug ("Source was destroyed. "
         "Avoided race condition in turn.c:priv_forget_send_request");
-    agent_unlock ();
+    agent_unlock (req->priv->nice_agent);
     return FALSE;
   }
 
@@ -972,7 +974,7 @@ priv_forget_send_request (gpointer pointer)
   g_source_unref (req->source);
   req->source = NULL;
 
-  agent_unlock ();
+  agent_unlock (req->priv->nice_agent);
 
   g_slice_free (SendRequest, req);
 
@@ -986,11 +988,11 @@ priv_permission_timeout (gpointer data)
 
   nice_debug ("Permission is about to timeout, schedule renewal");
 
-  agent_lock ();
+  agent_lock (priv->nice_agent);
   /* remove all permissions for this agent (the permission for the peer
      we are sending to will be renewed) */
   priv_clear_permissions (priv);
-  agent_unlock ();
+  agent_unlock (priv->nice_agent);
 
   return TRUE;
 }
@@ -1004,13 +1006,13 @@ priv_binding_expired_timeout (gpointer data)
 
   nice_debug ("Permission expired, refresh failed");
 
-  agent_lock ();
+  agent_lock (priv->nice_agent);
 
   source = g_main_current_source ();
   if (g_source_is_destroyed (source)) {
     nice_debug ("Source was destroyed. "
         "Avoided race condition in turn.c:priv_binding_expired_timeout");
-    agent_unlock ();
+    agent_unlock (priv->nice_agent);
     return FALSE;
   }
 
@@ -1050,7 +1052,7 @@ priv_binding_expired_timeout (gpointer data)
     }
   }
 
-  agent_unlock ();
+  agent_unlock (priv->nice_agent);
 
   return FALSE;
 }
@@ -1064,13 +1066,13 @@ priv_binding_timeout (gpointer data)
 
   nice_debug ("Permission is about to timeout, sending binding renewal");
 
-  agent_lock ();
+  agent_lock (priv->nice_agent);
 
   source = g_main_current_source ();
   if (g_source_is_destroyed (source)) {
     nice_debug ("Source was destroyed. "
         "Avoided race condition in turn.c:priv_binding_timeout");
-    agent_unlock ();
+    agent_unlock (priv->nice_agent);
     return FALSE;
   }
 
@@ -1090,7 +1092,7 @@ priv_binding_timeout (gpointer data)
     }
   }
 
-  agent_unlock ();
+  agent_unlock (priv->nice_agent);
 
   return FALSE;
 }
@@ -1670,11 +1672,11 @@ priv_retransmissions_tick (gpointer pointer)
 {
   UdpTurnPriv *priv = pointer;
 
-  agent_lock ();
+  agent_lock (priv->nice_agent);
   if (g_source_is_destroyed (g_main_current_source ())) {
     nice_debug ("Source was destroyed. "
         "Avoided race condition in turn.c:priv_retransmissions_tick");
-    agent_unlock ();
+    agent_unlock (priv->nice_agent);
     return FALSE;
   }
 
@@ -1685,7 +1687,7 @@ priv_retransmissions_tick (gpointer pointer)
       priv->tick_source_channel_bind = NULL;
     }
   }
-  agent_unlock ();
+  agent_unlock (priv->nice_agent);
 
   return FALSE;
 }
@@ -1695,11 +1697,11 @@ priv_retransmissions_create_permission_tick (gpointer pointer)
 {
   UdpTurnPriv *priv = pointer;
 
-  agent_lock ();
+  agent_lock (priv->nice_agent);
   if (g_source_is_destroyed (g_main_current_source ())) {
     nice_debug ("Source was destroyed. Avoided race condition in "
                 "turn.c:priv_retransmissions_create_permission_tick");
-    agent_unlock ();
+    agent_unlock (priv->nice_agent);
     return FALSE;
   }
 
@@ -1708,7 +1710,7 @@ priv_retransmissions_create_permission_tick (gpointer pointer)
    * if there are pending permissions that require it */
   priv_schedule_tick (priv);
 
-  agent_unlock ();
+  agent_unlock (priv->nice_agent);
 
   return FALSE;
 }
