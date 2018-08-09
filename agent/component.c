@@ -64,7 +64,10 @@ static void
 component_schedule_io_callback (Component *component);
 static void
 component_deschedule_io_callback (Component *component);
-
+static void
+component_detach_socket (Component *component, NiceSocket *nicesock);
+static void
+component_clear_selected_pair (Component *component);
 
 void
 incoming_check_free (IncomingCheck *icheck)
@@ -164,6 +167,45 @@ component_new (guint id, NiceAgent *agent, Stream *stream)
   g_queue_init (&component->queued_tcp_packets);
 
   return component;
+}
+
+void
+component_remove_socket (Component *cmp, NiceSocket *nsocket)
+{
+  GSList *i;
+
+  for (i = cmp->local_candidates; i;) {
+    NiceCandidate *candidate = i->data;
+    GSList *next = i->next;
+
+    if (!nice_socket_is_based_on (candidate->sockptr, nsocket)) {
+      i = next;
+      continue;
+    }
+
+    if (candidate == cmp->selected_pair.local) {
+      component_clear_selected_pair (cmp);
+      agent_signal_component_state_change (cmp->agent, cmp->stream->id,
+          cmp->id, NICE_COMPONENT_STATE_FAILED);
+    }
+
+    refresh_prune_candidate (cmp->agent, candidate);
+    if (candidate->sockptr != nsocket) {
+      discovery_prune_socket (cmp->agent, candidate->sockptr);
+      conn_check_prune_socket (cmp->agent, cmp->stream, cmp,
+          candidate->sockptr);
+      component_detach_socket (cmp, candidate->sockptr);
+    }
+    agent_remove_local_candidate (cmp->agent, candidate);
+    nice_candidate_free (candidate);
+
+    cmp->local_candidates = g_slist_delete_link (cmp->local_candidates, i);
+    i = next;
+  }
+
+  discovery_prune_socket (cmp->agent, nsocket);
+  conn_check_prune_socket (cmp->agent, cmp->stream, cmp, nsocket);
+  component_detach_socket (cmp, nsocket);
 }
 
 void
@@ -596,7 +638,7 @@ component_reattach_all_sockets (Component *component)
  *
  * If the @socket doesn’t exist in this @component, do nothing.
  */
-void
+static void
 component_detach_socket (Component *component, NiceSocket *nicesock)
 {
   GSList *l;

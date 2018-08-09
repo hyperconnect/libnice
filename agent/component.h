@@ -240,7 +240,7 @@ component_set_selected_remote_candidate (NiceAgent *agent, Component *component,
 void
 component_attach_socket (Component *component, NiceSocket *nsocket);
 void
-component_detach_socket (Component *component, NiceSocket *nsocket);
+component_remove_socket (Component *cmp, NiceSocket *nsocket);
 void
 component_detach_all_sockets (Component *component);
 void
