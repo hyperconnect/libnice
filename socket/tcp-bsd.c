@@ -303,6 +303,10 @@ socket_send_message (NiceSocket *sock,
   if (priv->error)
     return -1;
 
+  /* RST 등으로 socket이 내부적으로 사라진 경우를 대비 */
+  if (!G_IS_SOCKET (sock->fileno))
+    return -1;
+
   message_len = output_message_get_size (message);
 
   /* First try to send the data, don't send it later if it can be sent now
