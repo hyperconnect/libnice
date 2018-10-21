@@ -46,6 +46,8 @@
 #include "agent-priv.h"
 #include "socket-priv.h"
 
+#include "tcp-passive.h"
+
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -68,6 +70,7 @@ typedef struct {
   gboolean reliable;
   NiceSocketWritableCb writable_cb;
   gpointer writable_data;
+  NiceSocket *passive_parent;
 } TcpPriv;
 
 #define MAX_QUEUE_LENGTH 20
@@ -220,6 +223,10 @@ socket_close (NiceSocket *sock)
   if (priv->io_source) {
     g_source_destroy (priv->io_source);
     g_source_unref (priv->io_source);
+  }
+
+  if (priv->passive_parent) {
+    nice_tcp_passive_socket_remove_connection (sock, &priv->remote_addr);
   }
 
   nice_socket_free_send_queue (&priv->send_queue);
@@ -451,4 +458,14 @@ socket_send_more (
 
   agent_unlock ();
   return TRUE;
+}
+
+void
+nice_tcp_bsd_socket_set_passive_parent (NiceSocket *sock, NiceSocket *passive_parent)
+{
+  TcpPriv *priv = sock->priv;
+
+  g_assert (priv->passive_parent == NULL);
+
+  priv->passive_parent = passive_parent;
 }
