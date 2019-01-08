@@ -1953,6 +1953,10 @@ static void priv_mark_pair_nominated (NiceAgent *agent, NiceStream *stream, Nice
   /* step: search for at least one nominated pair */
   for (i = stream->conncheck_list; i; i = i->next) {
     CandidateCheckPair *pair = i->data;
+    if (NICE_AGENT_IS_COMPATIBLE_WITH_RFC5245_OR_OC2007R2 (agent) && !pair->valid) {
+        nice_debug("Agent %p : pair %p (%s) is ignored in priv_mark_pair_nominated", agent, pair, pair->foundation);
+        continue;
+    }
     if (pair->local == localcand && pair->remote == remotecand) {
       /* ICE, 7.2.1.5. Updating the Nominated Flag */
       /* note: TCP candidates typically produce peer reflexive
