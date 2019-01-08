@@ -3447,18 +3447,18 @@ static gboolean priv_add_remote_candidate (
           username, password, priority);
     }
 
-    if (NICE_AGENT_IS_COMPATIBLE_WITH_RFC5245_OR_OC2007R2 (agent)) {
-      /* note:  If there are TCP candidates for a media stream,
-       * a controlling agent MUST use the regular selection algorithm,
-       * RFC 6544, sect 8, "Concluding ICE Processing"
-       */
-      if (agent->nomination_mode == NICE_NOMINATION_MODE_AGGRESSIVE &&
-          transport != NICE_CANDIDATE_TRANSPORT_UDP) {
-        nice_debug ("Agent %p : we have TCP candidates, switching back "
-          "to regular nomination mode", agent);
-        agent->nomination_mode = NICE_NOMINATION_MODE_REGULAR;
-      }
-    }
+    // if (NICE_AGENT_IS_COMPATIBLE_WITH_RFC5245_OR_OC2007R2 (agent)) {
+    //   /* note:  If there are TCP candidates for a media stream,
+    //    * a controlling agent MUST use the regular selection algorithm,
+    //    * RFC 6544, sect 8, "Concluding ICE Processing"
+    //    */
+    //   if (agent->nomination_mode == NICE_NOMINATION_MODE_AGGRESSIVE &&
+    //       transport != NICE_CANDIDATE_TRANSPORT_UDP) {
+    //     nice_debug ("Agent %p : we have TCP candidates, switching back "
+    //       "to regular nomination mode", agent);
+    //     agent->nomination_mode = NICE_NOMINATION_MODE_REGULAR;
+    //   }
+    // }
 
     if (base_addr)
       candidate->base_addr = *base_addr;
