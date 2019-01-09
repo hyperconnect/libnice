@@ -4104,11 +4104,19 @@ gboolean conn_check_handle_inbound_stun (NiceAgent *agent, NiceStream *stream,
   username = (uint8_t *) stun_message_find (&req, STUN_ATTRIBUTE_USERNAME,
 					    &username_len);
 
+  u_int16_t cnt_remote_candidates = 0;
   for (i = component->remote_candidates; i; i = i->next) {
     NiceCandidate *cand = i->data;
     if (nice_address_equal (from, &cand->addr)) {
       remote_candidate = cand;
       break;
+    }
+    cnt_remote_candidates++;
+  }
+  if (stun_message_get_class (&req) == STUN_REQUEST && remote_candidate == NULL) {
+    if (cnt_remote_candidates >= 50) {
+      nice_debug ("Agent %p : Too many peer-reflexive candidates: STUN REQUEST ignored.", agent);
+      return TRUE;
     }
   }
   for (i = component->local_candidates; i; i = i->next) {
