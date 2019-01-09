@@ -3985,6 +3985,7 @@ gboolean conn_check_handle_inbound_stun (NiceAgent *agent, NiceStream *stream,
   guint uname_len;
   uint8_t *username;
   uint16_t username_len;
+  uint16_t cnt_remote_candidates = 0;
   StunMessage req;
   StunMessage msg;
   StunValidationStatus valid;
@@ -4104,7 +4105,6 @@ gboolean conn_check_handle_inbound_stun (NiceAgent *agent, NiceStream *stream,
   username = (uint8_t *) stun_message_find (&req, STUN_ATTRIBUTE_USERNAME,
 					    &username_len);
 
-  u_int16_t cnt_remote_candidates = 0;
   for (i = component->remote_candidates; i; i = i->next) {
     NiceCandidate *cand = i->data;
     if (nice_address_equal (from, &cand->addr)) {
