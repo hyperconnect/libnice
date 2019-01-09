@@ -4111,6 +4111,15 @@ gboolean conn_check_handle_inbound_stun (NiceAgent *agent, NiceStream *stream,
       break;
     }
   }
+
+  if (stun_message_get_class (&req) == STUN_REQUEST && remote_candidate == NULL) {
+    if (g_slist_length(component->remote_candidates) >= 50) {
+      nice_debug ("Agent %p : Too many peer-reflexive candidates: STUN REQUEST ignored.",
+          agent);
+      return FALSE;
+    }
+  }
+
   for (i = component->local_candidates; i; i = i->next) {
     NiceCandidate *cand = i->data;
     if (nice_address_equal (&nicesock->addr, &cand->addr)) {
